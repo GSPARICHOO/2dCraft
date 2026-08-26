@@ -4,8 +4,22 @@
   <meta charset="UTF-8">
   <title>Minecraft 2D</title>
   <style>
-    body { margin: 0; background: #111; display: flex; justify-content: center; align-items: center; height: 100vh; color: white; font-family: sans-serif; }
-    canvas { border: 2px solid #555; background: #87CEEB; }
+    body { 
+      margin: 0; 
+      background: #111; 
+      display: flex; 
+      justify-content: center; 
+      align-items: center; 
+      height: 100vh; 
+      font-family: sans-serif; 
+    }
+    canvas { 
+      border: 2px solid #555; 
+      background: #87CEEB; 
+      /* Desactiva el filtro borroso a nivel CSS */
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
   </style>
 </head>
 <body>

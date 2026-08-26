@@ -1,6 +1,9 @@
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
+// Desactivar filtro lineal en Canvas (Pixel Art nítido)
+ctx.imageSmoothingEnabled = false;
+
 const TILE_SIZE = 32;
 const COLS = canvas.width / TILE_SIZE;
 const ROWS = canvas.height / TILE_SIZE;
@@ -25,23 +28,41 @@ textureFiles.forEach(name => {
 // Matriz del mundo
 const world = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
 
+// Generación de mundo con relieve variable y árboles
 function generateWorld() {
-  const groundLevel = 9;
-  for (let r = 0; r < ROWS; r++) {
-    for (let c = 0; c < COLS; c++) {
+  let groundLevel = 8;
+
+  for (let c = 0; c < COLS; c++) {
+    // Variación del terreno
+    if (c % 4 === 0 && c > 2) {
+      groundLevel += Math.floor(Math.random() * 3) - 1;
+      groundLevel = Math.max(5, Math.min(ROWS - 4, groundLevel));
+    }
+
+    // Capas de tierra y piedra
+    for (let r = groundLevel; r < ROWS; r++) {
       if (r > groundLevel + 2) world[r][c] = 'piedra';
-      else if (r >= groundLevel) world[r][c] = 'tierra';
+      else world[r][c] = 'tierra';
+    }
+
+    // Generar árboles ocasionales
+    if (c > 3 && c < COLS - 3 && Math.random() < 0.25 && world[groundLevel][c] === 'tierra') {
+      const treeHeight = 3;
+      for (let i = 1; i <= treeHeight; i++) {
+        world[groundLevel - i][c] = 'tronco';
+      }
+      // Hojas del árbol
+      const top = groundLevel - treeHeight;
+      world[top - 1][c] = 'hojas';
+      world[top][c - 1] = 'hojas';
+      world[top][c + 1] = 'hojas';
+      world[top - 1][c - 1] = 'hojas';
+      world[top - 1][c + 1] = 'hojas';
     }
   }
-  // Árbol de ejemplo
-  world[8][6] = 'tronco';
-  world[7][6] = 'tronco';
-  world[6][6] = 'hojas';
-  world[6][5] = 'hojas';
-  world[6][7] = 'hojas';
 }
 
-// Estado del jugador y físicas
+// Jugador y Físicas
 const player = {
   x: 2 * TILE_SIZE,
   y: 0,
@@ -50,32 +71,32 @@ const player = {
   vx: 0,
   vy: 0,
   speed: 3,
-  jumpPower: -8,
+  jumpPower: -8.5,
   grounded: false
 };
 
-const gravity = 0.4;
+const gravity = 0.45;
 const keys = {};
 
-// Teclado
+// Eventos de Teclado
 window.addEventListener('keydown', e => keys[e.code] = true);
 window.addEventListener('keyup', e => keys[e.code] = false);
 
-// Ratón (Romper con Clic Izquierdo, Poner Tierra con Clic Derecho)
-canvas.addEventListener('contextmenu', e => e.preventDefault()); // Evitar menú secundario
+// Interacción con Ratón
+canvas.addEventListener('contextmenu', e => e.preventDefault());
 canvas.addEventListener('mousedown', (e) => {
   const rect = canvas.getBoundingClientRect();
   const col = Math.floor((e.clientX - rect.left) / TILE_SIZE);
   const row = Math.floor((e.clientY - rect.top) / TILE_SIZE);
 
   if (row >= 0 && row < ROWS && col >= 0 && col < COLS) {
-    if (e.button === 0) world[row][col] = null; // Clic izq -> Romper
-    else if (e.button === 2) world[row][col] = 'tierra'; // Clic der -> Poner bloque
+    if (e.button === 0) world[row][col] = null; // Clic Izq: Romper
+    else if (e.button === 2) world[row][col] = 'tierra'; // Clic Der: Colocar
   }
 });
 
 function update() {
-  // Movimiento Horizontal
+  // Movimiento
   if (keys['KeyA'] || keys['ArrowLeft']) player.vx = -player.speed;
   else if (keys['KeyD'] || keys['ArrowRight']) player.vx = player.speed;
   else player.vx = 0;
@@ -86,13 +107,12 @@ function update() {
     player.grounded = false;
   }
 
-  // Aplicar Gravedad
   player.vy += gravity;
 
-  // Actualizar X y colisión horizontal básica
+  // Movimiento X
   player.x += player.vx;
 
-  // Actualizar Y y colisión con el suelo (simple)
+  // Movimiento Y y detección simple de suelo
   player.y += player.vy;
   const feetRow = Math.floor((player.y + player.height) / TILE_SIZE);
   const colLeft = Math.floor(player.x / TILE_SIZE);
@@ -108,6 +128,8 @@ function update() {
 }
 
 function draw() {
+  // Garantizar pixelado nítido antes de dibujar cada cuadro
+  ctx.imageSmoothingEnabled = false;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   // Renderizar Terreno
